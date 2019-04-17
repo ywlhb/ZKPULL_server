@@ -1,0 +1,744 @@
+---
+swagger: "2.0"
+info:
+  description: "中控门禁控制器通讯服务API说明."
+  version: "1.0.0"
+  title: "Pull API"
+# host: "10.108.52.128:5005"
+basePath: "/v1"
+tags:
+- name: "connect"
+  description: "控制器的连接"
+- name: "param"
+  description: "控制器的参数"
+- name: "data"
+  description: "控制器中的数据"
+- name: "control"
+  description: "控制控制器动作"
+- name: "log"
+  description: "控制器中的日志"
+- name: "user"
+  description: "用户操作"
+schemes:
+- "http"
+- "https"
+paths:
+  /connect:
+    get:
+      tags:
+      - "connect"
+      summary: "通过IP查询控制器链接句柄"
+      description: ""
+      operationId: "get_connect_key"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters:
+      - name: "ipAddress"
+        in: "query"
+        description: "控制器TCP连接的IP地址"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "OK"
+          schema:
+            type: "integer"
+            format: "int64"
+        400:
+          description: "Invalid connect ip"
+      x-swagger-router-controller: "swagger_server.controllers.connect_controller"
+    post:
+      tags:
+      - "connect"
+      summary: "创建控制器的链接句柄"
+      description: ""
+      operationId: "creat_connect_key"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "tcpConParam"
+        description: "控制器TCP连接参数"
+        required: true
+        schema:
+          $ref: "#/definitions/TcpConParam"
+      responses:
+        200:
+          description: "OK"
+          schema:
+            type: "integer"
+            format: "int64"
+        201:
+          description: "Created"
+          schema:
+            type: "integer"
+            format: "int64"
+        400:
+          description: "Creat connect fail"
+      x-swagger-router-controller: "swagger_server.controllers.connect_controller"
+  /connect/{deviceKey}:
+    get:
+      tags:
+      - "connect"
+      summary: "通过连接句柄查询链接信息"
+      description: "返回TCP链接参数（不含链接密码）"
+      operationId: "get_con_param_by_hd"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters:
+      - name: "deviceKey"
+        in: "path"
+        description: "控制器的连接句柄"
+        required: true
+        type: "integer"
+        format: "int64"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/TcpConParam"
+        400:
+          description: "Invalid Key supplied"
+        404:
+          description: "Connect not found"
+      x-swagger-router-controller: "swagger_server.controllers.connect_controller"
+    delete:
+      tags:
+      - "connect"
+      summary: "关闭并删除控制器连接"
+      description: ""
+      operationId: "delete_connect"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters:
+      - name: "deviceKey"
+        in: "path"
+        description: "控制器的连接句柄"
+        required: true
+        type: "integer"
+        format: "int64"
+      responses:
+        200:
+          description: "successful operation"
+        400:
+          description: "Invalid Key supplied"
+        404:
+          description: "Connect not found"
+      x-swagger-router-controller: "swagger_server.controllers.connect_controller"
+  /param/{deviceKey}:
+    get:
+      tags:
+      - "param"
+      summary: "通过连接句柄查询控制器参数"
+      description: "返回控制器参数（返回参数是字符串数组，内容形式：Paramkey=value）"
+      operationId: "get_device_param_by_key"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters:
+      - name: "deviceKey"
+        in: "path"
+        description: "控制器的连接句柄"
+        required: true
+        type: "integer"
+        format: "int64"
+      - name: "paramKeys"
+        in: "query"
+        description: "请求查询的参数名称"
+        required: true
+        type: "array"
+        items:
+          type: "string"
+        collectionFormat: "multi"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              type: "string"
+        403:
+          description: "failed operation"
+          schema:
+            type: "integer"
+            format: "int64"
+        400:
+          description: "Invalid Key supplied"
+        404:
+          description: "Device not connect"
+      x-swagger-router-controller: "swagger_server.controllers.param_controller"
+    put:
+      tags:
+      - "param"
+      summary: "通过连接句柄设置控制器参数"
+      description: "设置控制器参数（参数是字符串数组，内容形式：Paramkey=value）"
+      operationId: "set_device_param_by_key"
+      consumes:
+      - "application/x-www-form-urlencoded"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters:
+      - name: "deviceKey"
+        in: "path"
+        description: "控制器的连接句柄"
+        required: true
+        type: "integer"
+        format: "int64"
+      - name: "paramKeyValues"
+        in: "formData"
+        description: "需要设置的参数的键值对数组（形式key=value）"
+        required: true
+        type: "array"
+        items:
+          type: "string"
+        collectionFormat: "pipes"
+      responses:
+        200:
+          description: "successful operation"
+        400:
+          description: "Invalid Key supplied"
+        403:
+          description: "failed operation"
+          schema:
+            type: "integer"
+            format: "int64"
+        404:
+          description: "Device not connect"
+      x-swagger-router-controller: "swagger_server.controllers.param_controller"
+  /param/datetime/{deviceKey}:
+    put:
+      tags:
+      - "param"
+      summary: "通过连接句柄设置控制器时间"
+      description: "如果不写时间参数，会设置为服务器时间"
+      operationId: "set_device_datetime_by_key"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters:
+      - name: "deviceKey"
+        in: "path"
+        description: "控制器的连接句柄"
+        required: true
+        type: "integer"
+        format: "int64"
+      - name: "datetime"
+        in: "query"
+        description: "需要设置的时间（yyyy-MM-dd HH:mm:ss）"
+        required: false
+        type: "string"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "string"
+        400:
+          description: "Invalid Key supplied"
+        403:
+          description: "failed operation"
+          schema:
+            type: "integer"
+            format: "int64"
+        404:
+          description: "Device not connect"
+      x-swagger-router-controller: "swagger_server.controllers.param_controller"
+  /control/{deviceKey}:
+    put:
+      tags:
+      - "control"
+      summary: "通过连接句柄控制控制器动作"
+      description: "返回控制器参数（返回参数是字符串数组，内容形式：Paramkey=value）"
+      operationId: "control_device_by_key"
+      consumes:
+      - "application/x-www-form-urlencoded"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters:
+      - name: "deviceKey"
+        in: "path"
+        description: "控制器的连接句柄"
+        required: true
+        type: "integer"
+        format: "int64"
+      - name: "OperationID"
+        in: "formData"
+        description: ""
+        required: true
+        type: "integer"
+        format: "int64"
+      - name: "params"
+        in: "formData"
+        description: "操作参数："
+        required: true
+        type: "array"
+        items:
+          type: "integer"
+          format: "int64"
+        collectionFormat: "pipes"
+      - name: "option"
+        in: "formData"
+        description: "默认为空，扩展之用"
+        required: false
+        type: "string"
+      responses:
+        200:
+          description: "successful operation"
+        400:
+          description: "Invalid Key supplied"
+        403:
+          description: "failed operation"
+          schema:
+            type: "integer"
+            format: "int64"
+        404:
+          description: "Device not connect"
+      x-swagger-router-controller: "swagger_server.controllers.control_controller"
+  /control/door/{deviceKey}:
+    put:
+      tags:
+      - "control"
+      summary: "通过连接句柄控制开门动作"
+      description: ""
+      operationId: "control_door_by_key"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters:
+      - name: "deviceKey"
+        in: "path"
+        description: "控制器的连接句柄"
+        required: true
+        type: "integer"
+        format: "int64"
+      - name: "doorID"
+        in: "query"
+        description: "门锁号（1-4），默认1号门锁"
+        required: false
+        type: "integer"
+        format: "int32"
+      - name: "openSecond"
+        in: "query"
+        description: "开门时间（0-60秒），默认5秒，0时表示关闭操作"
+        required: false
+        type: "integer"
+        format: "int32"
+      responses:
+        200:
+          description: "successful operation"
+        400:
+          description: "Invalid Key supplied"
+        403:
+          description: "failed operation"
+          schema:
+            type: "integer"
+            format: "int64"
+        404:
+          description: "Device not connect"
+      x-swagger-router-controller: "swagger_server.controllers.control_controller"
+  /control/auxout/{deviceKey}:
+    put:
+      tags:
+      - "control"
+      summary: "通过连接句柄控制辅助输出动作"
+      description: ""
+      operationId: "control_auxout_by_key"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters:
+      - name: "deviceKey"
+        in: "path"
+        description: "控制器的连接句柄"
+        required: true
+        type: "integer"
+        format: "int64"
+      - name: "auxoutID"
+        in: "query"
+        description: "辅助输出地址（1-4），默认1号辅助输出"
+        required: false
+        type: "integer"
+        format: "int32"
+      - name: "openSecond"
+        in: "query"
+        description: "打开时间（0-60秒），默认2秒，0时表示关闭操作"
+        required: false
+        type: "integer"
+        format: "int32"
+      responses:
+        200:
+          description: "successful operation"
+        400:
+          description: "Invalid Key supplied"
+        403:
+          description: "failed operation"
+          schema:
+            type: "integer"
+            format: "int64"
+        404:
+          description: "Device not connect"
+      x-swagger-router-controller: "swagger_server.controllers.control_controller"
+  /data/{deviceKey}/{tableName}:
+    get:
+      tags:
+      - "data"
+      summary: "通过连接句柄与数据表名取得控制器中的数据"
+      description: ""
+      operationId: "get_data_by_key"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters:
+      - name: "deviceKey"
+        in: "path"
+        description: "控制器的连接句柄"
+        required: true
+        type: "integer"
+        format: "int64"
+      - name: "tableName"
+        in: "path"
+        description: "数据表名：用户表=user，权限表=userauthorize，指纹=templatev10，门禁事件记录表=Transaction"
+        required: true
+        type: "string"
+      - name: "fieldNames"
+        in: "query"
+        description: "字段名列表"
+        required: false
+        type: "array"
+        items:
+          type: "string"
+        collectionFormat: "pipes"
+      - name: "filters"
+        in: "query"
+        description: "筛选器列表"
+        required: false
+        type: "array"
+        items:
+          type: "string"
+        collectionFormat: "pipes"
+      - name: "options"
+        in: "query"
+        description: "选项，当前仅在下载门禁事件记录表的数据时有效，值为“New Record”时下载新记录"
+        required: false
+        type: "string"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              type: "string"
+        400:
+          description: "Invalid Key or Table supplied"
+        403:
+          description: "failed operation"
+          schema:
+            type: "integer"
+            format: "int64"
+        404:
+          description: "Device not connect"
+      x-swagger-router-controller: "swagger_server.controllers.data_controller"
+    put:
+      tags:
+      - "data"
+      summary: "通过连接句柄与数据表名设置控制器中的数据"
+      description: "如果插入的记录的主键已在设备中则覆盖原记录"
+      operationId: "set_data_by_key"
+      consumes:
+      - "application/x-www-form-urlencoded"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters:
+      - name: "deviceKey"
+        in: "path"
+        description: "控制器的连接句柄"
+        required: true
+        type: "integer"
+        format: "int64"
+      - name: "tableName"
+        in: "path"
+        description: "数据表名：用户表=user，权限表=userauthorize，指纹=templatev10，门禁事件记录表=Transaction"
+        required: true
+        type: "string"
+      - name: "data"
+        in: "formData"
+        description: "数据内容:各个“字段=值”对之间用,分隔"
+        required: true
+        type: "array"
+        items:
+          type: "string"
+        collectionFormat: "pipes"
+      - name: "options"
+        in: "formData"
+        description: "默认为空，扩展之用"
+        required: false
+        type: "string"
+      responses:
+        200:
+          description: "successful operation"
+        400:
+          description: "Invalid Key or Table supplied"
+        403:
+          description: "failed operation"
+          schema:
+            type: "integer"
+            format: "int64"
+        404:
+          description: "Device not connect"
+      x-swagger-router-controller: "swagger_server.controllers.data_controller"
+    delete:
+      tags:
+      - "data"
+      summary: "通过连接句柄与数据表名删除控制器中的数据"
+      description: ""
+      operationId: "delete_data_by_key"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters:
+      - name: "deviceKey"
+        in: "path"
+        description: "控制器的连接句柄"
+        required: true
+        type: "integer"
+        format: "int64"
+      - name: "tableName"
+        in: "path"
+        description: "数据表名：用户表=user，权限表=userauthorize，指纹=templatev10，门禁事件记录表=Transaction"
+        required: true
+        type: "string"
+      - name: "filters"
+        in: "query"
+        description: "筛选器列表"
+        required: false
+        type: "array"
+        items:
+          type: "string"
+        collectionFormat: "pipes"
+      - name: "options"
+        in: "query"
+        description: "默认为空，扩展之用"
+        required: false
+        type: "string"
+      responses:
+        200:
+          description: "successful operation"
+        400:
+          description: "Invalid Key or Table supplied"
+        403:
+          description: "failed operation"
+          schema:
+            type: "integer"
+            format: "int64"
+        404:
+          description: "Device not connect"
+      x-swagger-router-controller: "swagger_server.controllers.data_controller"
+  /data/user/{deviceKey}:
+    put:
+      tags:
+      - "user"
+      summary: "通过连接句柄设置控制器中的用户数据"
+      description: "如果插入的记录的主键已在设备中则覆盖原记录"
+      operationId: "set_user_by_key"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters:
+      - name: "deviceKey"
+        in: "path"
+        description: "控制器的连接句柄"
+        required: true
+        type: "integer"
+        format: "int64"
+      - name: "user"
+        in: "body"
+        description: ""
+        required: true
+        schema:
+          $ref: "#/definitions/User"
+      responses:
+        200:
+          description: "successful operation"
+        400:
+          description: "Invalid Key supplied"
+        403:
+          description: "failed operation"
+          schema:
+            type: "integer"
+            format: "int64"
+        404:
+          description: "Device not connect"
+      x-swagger-router-controller: "swagger_server.controllers.data_controller"
+    get:
+      tags:
+      - "user"
+      summary: "通过连接句柄设置控制器中的用户数据"
+      description: "如果插入的记录的主键已在设备中则覆盖原记录"
+      operationId: "get_user_by_key"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters:
+      - name: "deviceKey"
+        in: "path"
+        description: "控制器的连接句柄"
+        required: true
+        type: "integer"
+        format: "int64"
+      - name: "userID"
+        in: "query"
+        description: ""
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/User"
+        400:
+          description: "Invalid Key supplied"
+        403:
+          description: "failed operation"
+          schema:
+            type: "integer"
+            format: "int64"
+        404:
+          description: "Device not connect"
+      x-swagger-router-controller: "swagger_server.controllers.data_controller"
+    delete:
+      tags:
+      - "user"
+      summary: "通过连接句柄设置控制器中的用户数据"
+      description: "如果插入的记录的主键已在设备中则覆盖原记录"
+      operationId: "del_user_by_key"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters:
+      - name: "deviceKey"
+        in: "path"
+        description: "控制器的连接句柄"
+        required: true
+        type: "integer"
+        format: "int64"
+      - name: "userID"
+        in: "query"
+        description: ""
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "successful operation"
+        400:
+          description: "Invalid Key supplied"
+        403:
+          description: "failed operation"
+          schema:
+            type: "integer"
+            format: "int64"
+        404:
+          description: "Device not connect"
+      x-swagger-router-controller: "swagger_server.controllers.data_controller"
+  /log/{deviceKey}:
+    get:
+      tags:
+      - "log"
+      summary: "通过连接句柄取得控制器日志"
+      description: ""
+      operationId: "get_log_by_key"
+      produces:
+      - "application/xml"
+      - "application/json"
+      parameters:
+      - name: "deviceKey"
+        in: "path"
+        description: "控制器的连接句柄"
+        required: true
+        type: "integer"
+        format: "int64"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              type: "string"
+        400:
+          description: "Invalid Key or Table supplied"
+        403:
+          description: "failed operation"
+          schema:
+            type: "integer"
+            format: "int64"
+        404:
+          description: "Device not connect"
+      x-swagger-router-controller: "swagger_server.controllers.log_controller"
+definitions:
+  TcpConParam:
+    type: "object"
+    description: TCP连接参数
+    properties:
+      ip:
+        type: "string"
+      port:
+        type: "integer"
+        format: "int32"
+      timeout:
+        type: "integer"
+        format: "int32"
+      passwd:
+        type: "string"
+      hd:
+        type: "integer"
+        format: "int64"
+    xml:
+      name: "TcpConParam"
+  User:
+    type: "object"
+    description: 授权用户数据
+    properties:
+      id:
+        type: "string"
+        description: 用户ID，只能数字，最大9位
+      name:
+        type: "string"
+        description: 用户名，暂时不用
+      passwd:
+        type: "string"
+        description: 用户密码，只能数字，最大6位
+      cardNo:
+        type: "integer"
+        format: "int64"
+        description: 卡号，8字节整数形式
+      authorize:
+        type: "array"
+        items:
+          type: "boolean"
+        description: 1-4号门是否可开启
+      finger:
+        type: "array"
+        items:
+          type: "object"
+          properties:
+            fingerID:
+              type: "integer"
+              format: "int32"
+              description: 手指编号（0-9），胁迫（16-25）
+            size:
+              type: "integer"
+              format: "int32"
+              description: 指纹模板长度
+            valid:
+              type: "boolean"
+              description: 是否胁迫指纹
+            template:
+              type: "string"
+              description: 指纹模板
+    xml:
+      name: "User"
